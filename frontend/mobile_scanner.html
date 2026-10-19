@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mobile Barcode Gun — Sereyromanea Parking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0A0908;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 9, 8, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .top-bar h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .top-bar h1 span {
+      color: #FF6B4A;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .icon-btn:active {
+      background: rgba(255, 107, 74, 0.3);
+    }
+
+    /* Viewfinder */
+    .viewfinder-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Scanning overlay */
+    .scan-reticle {
+      position: absolute;
+      width: 80vw;
+      max-width: 320px;
+      height: 200px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .reticle-corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-color: #FF6B4A;
+      border-style: solid;
+    }
+
+    .tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 16px; }
+    .tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 16px; }
+    .bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 16px; }
+    .br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 16px; }
+
+    .laser-line {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: 15%;
+      height: 2.5px;
+      background: #FF3B30;
+      box-shadow: 0 0 10px 2px rgba(255, 59, 48, 0.85);
+      border-radius: 2px;
+      animation: laserSweep 2s ease-in-out infinite alternate;
+      z-index: 5;
+    }
+
+    @keyframes laserSweep {
+      0% { top: 15%; opacity: 0.9; }
+      50% { opacity: 1; }
+      100% { top: 85%; opacity: 0.9; }
+    }
+
+    /* Status Bar */
+    .status-pill {
+      position: absolute;
+      top: 20px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 999px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill.success {
+      background: #10B981;
+      border-color: #10B981;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Bottom info / last scan */
+    .bottom-bar {
+      padding: 18px 20px;
+      background: rgba(10, 9, 8, 0.92);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .last-scan-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .last-scan-card span {
+      font-size: 0.78rem;
+      color: #A19991;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .last-scan-card b {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      color: #FF6B4A;
+      letter-spacing: 0.5px;
+    }
+
+    .instruction {
+      text-align: center;
+      font-size: 0.76rem;
+      color: #A19991;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="top-bar">
+    <h1><span class="material-symbols-outlined">barcode_scanner</span> Mobile Scanner</h1>
+    <div class="top-actions">
+      <button class="icon-btn" id="btnSwitchCam" title="Switch Camera">
+        <span class="material-symbols-outlined">cameraswitch</span>
+      </button>
+      <a href="/" class="icon-btn" style="text-decoration:none;" title="Exit to App">
+        <span class="material-symbols-outlined">close</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="viewfinder-wrap">
+    <video id="video" autoplay playsinline muted></video>
+
+    <div class="status-pill" id="statusPill">
+      <span class="material-symbols-outlined" style="font-size:16px;">photo_camera</span>
+      <span id="statusText">Point camera at receipt barcode or QR</span>
+    </div>
+
+    <div class="scan-reticle">
+      <div class="reticle-corner tl"></div>
+      <div class="reticle-corner tr"></div>
+      <div class="reticle-corner bl"></div>
+      <div class="reticle-corner br"></div>
+      <div class="laser-line"></div>
+    </div>
+  </main>
+
+  <footer class="bottom-bar">
+    <div class="last-scan-card">
+      <div>
+        <span>Latest Beamed Ticket</span>
+        <div style="font-size:0.75rem; color:#10B981; font-weight:600;" id="beamStatus">Ready to scan</div>
+      </div>
+      <b id="lastTicketText">--</b>
+    </div>
+
+    <div class="instruction">
+      Hold ticket barcode or QR inside frame.<br>
+      Scans instantly send directly to the cashier Check-Out screen.
+    </div>
+  </footer>
+
+  <script>
+    let currentStream = null;
+    let facingMode = 'environment';
+    let scanInterval = null;
+    let isProcessing = false;
+    let lastScannedCode = null;
+    let lastScanTime = 0;
+
+    const video = document.getElementById('video');
+    const statusPill = document.getElementById('statusPill');
+    const statusText = document.getElementById('statusText');
+    const lastTicketText = document.getElementById('lastTicketText');
+    const beamStatus = document.getElementById('beamStatus');
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1550, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.14);
+      } catch (e) {}
+    }
+
+    async function startCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
+
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = currentStream;
+        await video.play();
+        startScanner();
+      } catch (err) {
+        statusText.textContent = 'Camera permission required';
+      }
+    }
+
+    function startScanner() {
+      if (scanInterval) clearInterval(scanInterval);
+
+      let detector = null;
+      if ('BarcodeDetector' in window) {
+        try {
+          detector = new BarcodeDetector({
+            formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'upc_a']
+          });
+        } catch(e) {}
+      }
+
+      scanInterval = setInterval(async () => {
+        if (isProcessing || !video || video.readyState < 2 || video.paused) return;
+        isProcessing = true;
+
+        try {
+          if (detector) {
+            const barcodes = await detector.detect(video);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              handleDetectedCode(barcodes[0].rawValue);
+            }
+          }
+        } catch (e) {
+        } finally {
+          isProcessing = false;
+        }
+      }, 150);
+    }
+
+    async function handleDetectedCode(raw) {
+      if (!raw) return;
+      let code = String(raw).trim();
+
+      // If URL scanned, extract ticket id: http://.../ticket/PK00028 -> PK00028
+      if (code.includes('/ticket/')) {
+        code = code.split('/ticket/').pop().split('?')[0].split('/')[0];
+      } else if (code.includes('/t/')) {
+        code = code.split('/t/').pop().split('?')[0].split('/')[0];
+      }
+
+      // Strip delimiters (*PK00028*)
+      if (code.startsWith('*') && code.endsWith('*') && code.length > 2) {
+        code = code.slice(1, -1).trim();
+      }
+
+      // Cooldown to avoid duplicate beams within 2.5 seconds for same ticket
+      const now = Date.now();
+      if (code === lastScannedCode && (now - lastScanTime) < 2500) {
+        return;
+      }
+
+      lastScannedCode = code;
+      lastScanTime = now;
+
+      // Audio & Vibration
+      playBeep();
+      if (navigator.vibrate) navigator.vibrate([100]);
+
+      statusPill.className = 'status-pill success';
+      statusText.textContent = `✓ Scanned: ${code}`;
+      lastTicketText.textContent = code;
+      beamStatus.textContent = 'Beaming to Check-Out counter...';
+
+      try {
+        const resp = await fetch('/api/remote-scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: code, action: 'checkout', source: 'mobile_scanner_gun' })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          beamStatus.textContent = '✓ Sent to Check-Out Screen!';
+        } else {
+          beamStatus.textContent = 'Server received code';
+        }
+      } catch (err) {
+        beamStatus.textContent = 'Network error sending code';
+      }
+
+      setTimeout(() => {
+        statusPill.className = 'status-pill';
+        statusText.textContent = 'Point camera at receipt barcode or QR';
+      }, 2000);
+    }
+
+    document.getElementById('btnSwitchCam').onclick = () => {
+      facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+      startCamera();
+    };
+
+    startCamera();
+  </script>
+</body>
+</html>

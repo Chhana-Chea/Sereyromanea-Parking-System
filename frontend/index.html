@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sereyromanea Building — Parking Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Customer Kiosk Layout (Screen for entering riders / users) -->
+  <div id="customerKiosk" class="customer-kiosk hidden">
+    <header class="kiosk-header">
+      <div class="kiosk-brand">
+        <div class="kiosk-logo"><span class="material-symbols-outlined icon-md">domain</span></div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3>Sereyromanea Building</h3>
+            <span class="kiosk-screen-pill">Customer Screen</span>
+          </div>
+          <span>Tap button to get your parking receipt</span>
+        </div>
+      </div>
+      <div class="kiosk-clock" id="kioskClock"></div>
+      <div class="kiosk-header-actions">
+        <button class="kiosk-fullscreen-btn btn-sm" id="kioskFullscreenBtn" title="Toggle Fullscreen Mode">
+          <span class="material-symbols-outlined icon-sm">fullscreen</span> Fullscreen
+        </button>
+      </div>
+    </header>
+    <div class="kiosk-body">
+      <div class="kiosk-panel" id="kioskStartPanel">
+        <!-- Silent background camera stream for real capture verification (completely hidden from customer view) -->
+        <video id="kioskCameraVideo" autoplay playsinline muted class="kiosk-camera-hidden" aria-hidden="true"></video>
+
+        <!-- Welcoming Hero Badge
+        <div class="kiosk-welcome-badge">
+          <div class="kiosk-welcome-glow"></div>
+          <div class="kiosk-welcome-icon"><span class="material-symbols-outlined icon-hero">two_wheeler</span></div>
+        </div> -->
+
+        <h1 class="kiosk-welcome-title">Welcome to Sereyromanea Building</h1>
+        <p class="kiosk-welcome-subtitle">Please tap the button below to get your parking receipt and enter.</p>
+        
+        <button class="kiosk-btn-action kiosk-btn-hero" id="kioskSubmitBtn">
+          <span class="kiosk-btn-hero-icon"><span class="material-symbols-outlined icon-lg">print</span></span>
+          <span class="kiosk-btn-hero-label">Get Parking Receipt</span>
+        </button>
+      </div>
+
+      <div class="kiosk-panel hidden" id="kioskSuccessPanel">
+        <div class="kiosk-success-check"><span class="material-symbols-outlined icon-xl">check_circle</span></div>
+        <h1>Ticket Printed!</h1>
+        <p>Please keep your receipt and park in your assigned slot.</p>
+        
+        <div class="kiosk-space-box">
+          <span>ASSIGNED SPACE</span>
+          <b id="kioskAssignedSpace">—</b>
+        </div>
+        
+        <div class="kiosk-details">
+          <div><span>Ticket ID:</span><b id="kioskTicketCode">—</b></div>
+          <div><span>Arrival Time:</span><b id="kioskArrivalTime">—</b></div>
+        </div>
+        
+        <div class="kiosk-countdown-msg" id="kioskCountdownMsg" style="margin: 16px 0 6px; font-size: 0.95rem; color: #8fa0b5;">
+          Auto-closing in <b id="kioskSecondsLeft" style="color: #38ef7d; font-size: 1.15rem;">5</b> seconds...
+        </div>
+
+        <button class="kiosk-btn-done" id="kioskDoneBtn">Finished (5s)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Overlay Screen (Default initial visible screen for management window) -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo"><span class="material-symbols-outlined icon-lg">domain</span></div>
+        <h2>Sereyromanea Building</h2>
+        <p>Enter your credentials to access the parking management system</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="e.g. admin" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div id="loginError" class="login-error-msg hidden"></div>
+        <button type="submit" class="login-submit-btn" id="loginSubmitBtn">
+          <span class="btn-text" id="loginSubmitBtnText">Log In to Management</span>
+          <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <div class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon"><span class="material-symbols-outlined icon-md">domain</span></div>
+        <div class="brand-text">
+          <strong class="brand-title">Sereyromanea Building</strong>
+          <span class="brand-subtitle">Parking Management</span>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-item active" data-page="dashboard"><span class="material-symbols-outlined">dashboard</span> <span>Dashboard</span></button>
+        <button class="nav-item" data-page="checkin"><span class="material-symbols-outlined">two_wheeler</span> <span>Parked Motos & Fee</span></button>
+        <button class="nav-item" data-page="checkout"><span class="material-symbols-outlined">output</span> <span>Check-Out</span></button>
+        <button class="nav-item" data-page="camera"><span class="material-symbols-outlined">videocam</span> <span>Camera Verification</span></button>
+        <button class="nav-item" data-page="history"><span class="material-symbols-outlined">history</span> <span>Parking History</span></button>
+        <button class="nav-item" data-page="reports" id="navReports"><span class="material-symbols-outlined">bar_chart</span> <span>Reports</span></button>
+        <button class="nav-item" data-page="users" id="navUsers"><span class="material-symbols-outlined">group</span> <span>Employees</span></button>
+        <button class="nav-item" data-page="settings"><span class="material-symbols-outlined">settings</span> <span>Settings</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="logout-btn" id="logoutBtn" title="Log Out">
+          <span class="material-symbols-outlined icon-sm">logout</span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle">Monitor your parking area in real time.</p>
+        </div>
+        <div class="top-actions">
+          <div class="clock" id="clock"></div>
+          <div class="employee">
+            <div class="avatar" id="employeeAvatar">AD</div>
+            <div><b id="employeeName">Admin</b><small id="employeeRole">Parking Employee</small></div>
+          </div>
+        </div>
+      </header>
+
+      <section id="page-dashboard" class="page active-page">
+        <div class="stats">
+          <div class="stat"><span>Total Spaces</span><b id="totalSpaces">500</b><em>Parking capacity</em></div>
+          <div class="stat"><span>Available</span><b class="green" id="availableSpaces">0</b><em>Ready for parking</em>
+          </div>
+          <div class="stat"><span>Occupied</span><b class="orange" id="occupiedSpaces">0</b><em>Currently parked</em>
+          </div>
+          <div class="stat"><span>Parked Now</span><b id="parkedNow">0</b><em>Active records</em></div>
+        </div>
+        <div class="dashboard-grid-full">
+          <div class="card activity-card">
+            <div class="card-head">
+              <div>
+                <h2>Daily Activity</h2>
+                <p>Latest parking events</p>
+              </div>
+              <button class="link-btn" data-go="reports">View all →</button>
+            </div>
+            <div id="activityList" class="activity-list"></div>
+          </div>
+        </div>
+        <!-- Manager Console Quick Actions -->
+        <div class="quick-actions card hidden" id="managerQuickActions">
+          <div>
+            <h2>Manager Console</h2>
+            <p>Executive management, audit logs, and technology settings.</p>
+          </div>
+          <div class="actions">
+            <button class="primary" data-go="reports"><span class="material-symbols-outlined icon-sm">payments</span> All Revenue & Reports</button>
+            <button class="secondary" data-go="users"><span class="material-symbols-outlined icon-sm">group</span> Employee Accounts</button>
+            <button class="secondary" data-go="camera"><span class="material-symbols-outlined icon-sm">videocam</span> Security Cameras</button>
+            <button class="secondary" data-go="history"><span class="material-symbols-outlined icon-sm">history</span> Audit History</button>
+          </div>
+        </div>
+
+        <!-- Staff Operations Quick Actions -->
+        <div class="quick-actions card" id="staffQuickActions">
+          <div>
+            <h2>Quick Actions</h2>
+            <p>Start a common parking operation.</p>
+          </div>
+          <div class="actions">
+            <button class="primary" data-go="checkin"><span class="material-symbols-outlined icon-sm">two_wheeler</span> View Parked Motos & Fee</button>
+            <button class="secondary" data-go="checkout"><span class="material-symbols-outlined icon-sm">output</span> Process Check-Out</button>
+            <button class="secondary" data-go="camera"><span class="material-symbols-outlined icon-sm">videocam</span> Open Camera</button>
+            <button class="secondary" data-go="reports"><span class="material-symbols-outlined icon-sm">receipt_long</span> My Shift Report</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-checkin" class="page">
+        <!-- Parking Status & Fee Report Summary -->
+        <div class="stats">
+          <div class="stat">
+            <span>Parking Fee</span>
+            <b class="peach-highlight">300 Riel</b>
+            <em>Per motorcycle</em>
+          </div>
+          <div class="stat">
+            <span>Parked Now</span>
+            <b id="checkinParkedCount">0</b>
+            <em>Motos currently inside</em>
+          </div>
+          <div class="stat">
+            <span>Available Spaces</span>
+            <b class="green" id="checkinAvailableCount">0</b>
+            <em>Ready for parking</em>
+          </div>
+          <div class="stat">
+            <span>Unpaid In-Progress</span>
+            <b id="checkinUnpaidTotal">0 Riel</b>
+            <em>Active parking fee</em>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <!-- Left Column: Active Parked Motos List -->
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Parked Motorcycles</h2>
+                <p>Live active motorcycles in the parking area</p>
+              </div>
+              <span class="status-pill verified" id="checkinLiveBadge">● LIVE</span>
+            </div>
+
+            <div class="search-box" style="margin-bottom: 14px;">
+              <div class="search-input-wrap" style="width: 100%;">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input id="checkinMotoSearch" placeholder="Search Moto ID, slot (e.g. 001) or ticket code...">
+              </div>
+            </div>
+
+            <div class="parked-motos-container" id="parkedMotosList">
+              <!-- Dynamically rendered list of parked motorcycles -->
+            </div>
+          </div>
+
+          <!-- Right Column: Selected Moto Detail & Entrance Photo Preview -->
+          <div class="card" id="checkinDetailCard">
+            <div class="card-head">
+              <div>
+                <h2>Motorcycle Details & Photo</h2>
+                <p>Photo captured at entrance kiosk</p>
+              </div>
+              <span class="status-pill pending" id="checkinSelectedBadge">NO SELECTION</span>
+            </div>
+
+            <div id="checkinDetailContent" class="record-empty">
+              <span class="material-symbols-outlined icon-hero">two_wheeler</span>
+              <b>Select a Parked Motorcycle</b>
+              <small>Click any motorcycle from the list on the left to view its entrance photo, parking fee, and receipt.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-checkout" class="page">
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Find Parking Record</h2>
+                <p>Scan the ticket or enter its code.</p>
+              </div>
+            </div>
+            <div class="search-box">
+              <div class="search-input-wrap" style="flex: 1;">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input id="checkoutSearch" placeholder="Scan barcode or enter ticket code / Moto ID">
+              </div>
+              <button class="primary" id="findRecord"><span class="material-symbols-outlined icon-sm">search</span> Search</button>
+            </div>
+            <div id="checkoutRecord" class="record-empty"><span class="material-symbols-outlined icon-hero">receipt_long</span><b>No record selected</b><small>Example:
+                PK00125 or Moto ID 84920153</small></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Exit Camera</h2>
+                <p>Live checkout gate feed for departure verification.</p>
+              </div>
+              <span class="camera-status" id="checkoutExitCameraStatus"><i></i> Standby</span>
+            </div>
+            <div class="camera-box" id="checkoutExitCameraBox">
+              <div class="camera-overlay">EXIT GATE • LIVE</div>
+              <img id="checkoutExitCameraImg" class="camera-stream-img hidden" alt="Exit Gate Stream">
+              <video id="checkoutExitCameraVideo" autoplay playsinline muted class="camera-stream-img hidden"></video>
+              <div class="camera-placeholder" id="checkoutExitPlaceholder">
+                <span class="material-symbols-outlined icon-hero">videocam</span>
+                <b id="checkoutExitPlaceholderTitle">EXIT GATE CAMERA</b>
+                <small id="checkoutExitPlaceholderSub">Live checkout gate stream</small>
+              </div>
+            </div>
+            <button class="primary wide" id="verifyBtn" disabled style="margin-top: 12px;">
+              <span class="material-symbols-outlined icon-sm">verified</span> Compare & Verify
+            </button>
+          </div>
+        </div>
+        <div class="card verification hidden" id="verificationPanel">
+          <div class="verify-header">
+            <div>
+              <h2 id="verifyTitle">VERIFIED</h2>
+              <p id="verifyMessage"></p>
+            </div><span id="verifyBadge" class="status-pill"></span>
+          </div>
+          <div id="checkoutPhotoComparison" style="margin: 14px 0;"></div>
+          <div class="actions"><button class="secondary" id="viewOriginal">View Original Record</button><button
+              class="danger" id="rejectExit">Reject Exit</button><button class="primary" id="approveExit">Approve
+              Exit</button></div>
+        </div>
+      </section>
+
+      <section id="page-camera" class="page">
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Entrance Camera</h2>
+                <p>Live stream from gate checkpoint (ESP32-CAM).</p>
+              </div><span class="camera-status" id="entranceCameraStatus"><i></i> Connecting...</span>
+            </div>
+            <div class="camera-box tall" id="entranceCameraBox">
+              <div class="camera-overlay">ENTRANCE • LIVE</div>
+              <img id="entranceStreamImg" class="camera-stream-img hidden" alt="Live Entrance Camera Stream">
+              <div class="camera-placeholder" id="entrancePlaceholder">
+                <span class="material-symbols-outlined icon-hero">videocam</span>
+                <b>CONNECTING CAMERA...</b>
+                <small>Connecting to ESP32-CAM stream</small>
+              </div>
+            </div>
+            <div class="camera-card-actions">
+              <button class="secondary btn-sm" id="btnRefreshStream"><span class="material-symbols-outlined icon-sm">sync</span> Refresh Stream</button>
+              <button class="secondary btn-sm" id="btnTestCapture"><span class="material-symbols-outlined icon-sm">photo_camera</span> Test Snapshot</button>
+              <button class="primary btn-sm" data-go="checkin">Go to Parked Motos →</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Exit Camera</h2>
+                <p>Verify departing motorcycles at checkout gate.</p>
+              </div><span class="camera-status" id="exitCameraStatus"><i></i> Standby</span>
+            </div>
+            <div class="camera-box tall" id="exitCameraBox">
+              <div class="camera-overlay">EXIT • GATE</div>
+              <img id="exitCameraImg" class="camera-stream-img hidden" alt="Exit Gate Stream">
+              <video id="exitCameraVideo" autoplay playsinline muted class="camera-stream-img hidden"></video>
+              <div class="camera-placeholder" id="exitPlaceholder">
+                <span class="material-symbols-outlined icon-hero">two_wheeler</span>
+                <b id="exitPlaceholderTitle">EXIT CAMERA</b>
+                <small id="exitPlaceholderSub">Gate checkout camera</small>
+              </div>
+            </div>
+            <div class="camera-card-actions">
+              <button class="secondary btn-sm" data-go="checkout">Go to Check-Out →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-history" class="page">
+        <div class="card">
+          <div class="page-toolbar">
+            <div>
+              <h2>Parking History</h2>
+              <p>Search completed and active parking records.</p>
+            </div><button class="secondary" id="printHistory"><span class="material-symbols-outlined icon-sm">print</span> Print Records</button>
+          </div>
+          <div class="filters">
+            <div class="search-input-wrap">
+              <span class="material-symbols-outlined search-icon">search</span>
+              <input id="historySearch" placeholder="Search by parking slot, Moto ID, or ticket code...">
+            </div>
+            <select id="historyStatus">
+              <option value="">All statuses</option>
+              <option value="PARKED">PARKED</option>
+              <option value="COMPLETED">COMPLETED</option>
+            </select>
+            <select id="historyVerification">
+              <option value="">All verification</option>
+              <option value="VERIFIED">VERIFIED</option>
+              <option value="NOT VERIFIED">NOT VERIFIED</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Parking</th>
+                  <th>Record</th>
+                  <th>Moto ID</th>
+                  <th>Arrival</th>
+                  <th>Exit</th>
+                  <th>Duration</th>
+                  <th>Fee</th>
+                  <th>Cashier</th>
+                  <th>Verification</th>
+                  <th>Status</th>
+                  <th>Images</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-reports" class="page">
+        <!-- ==================== MANAGER REPORTS VIEW ==================== -->
+        <div id="managerReportsView">
+          <div class="reports-header-banner card" style="margin-bottom: 20px;">
+            <div class="reports-banner-content">
+              <div>
+                <span class="status-pill verified" style="font-weight: 700; font-size: 11px; margin-bottom: 6px; display: inline-block;">EXECUTIVE FINANCIAL OVERVIEW</span>
+                <h2 style="margin: 4px 0 6px 0;">All-Time Financial & Operational Performance</h2>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 13.5px;">Complete revenue audit, collection by staff, and parking volume metrics.</p>
+              </div>
+              <div class="reports-header-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="secondary" id="exportCsvBtn"><span class="material-symbols-outlined icon-sm">download</span> Export CSV</button>
+                <button class="primary" id="printReport"><span class="material-symbols-outlined icon-sm">print</span> Print Statement</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- All-Amount Executive Financial KPI Cards -->
+          <div class="stats stats-5">
+            <div class="stat highlight-stat">
+              <span>All-Time Gross Revenue</span>
+              <b class="peach-highlight" id="mgrAllTimeRevenue">0 Riel</b>
+              <em>Total revenue to date</em>
+            </div>
+            <div class="stat">
+              <span>This Month's Revenue</span>
+              <b class="green" id="mgrMonthRevenue">0 Riel</b>
+              <em id="mgrMonthCount">0 motorcycles this month</em>
+            </div>
+            <div class="stat">
+              <span>Today's Revenue</span>
+              <b id="todayRevenue">0 Riel</b>
+              <em id="mgrTodayCount">0 exited today</em>
+            </div>
+            <div class="stat">
+              <span>Completed Motorcycles</span>
+              <b id="mgrAllTimeCount">0</b>
+              <em>All-time completed exits</em>
+            </div>
+            <div class="stat">
+              <span>Avg Parking Duration</span>
+              <b id="mgrAvgDuration">0 min</b>
+              <em>Per completed session</em>
+            </div>
+          </div>
+
+          <!-- Staff Cashier Collection & Performance Breakdown Table -->
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-head">
+              <div>
+                <h2>Cashier Collection & Staff Breakdown</h2>
+                <p>Total cash collected and tickets processed per employee.</p>
+              </div>
+              <button class="link-btn" data-go="users">Manage Staff →</button>
+            </div>
+            <div class="table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Staff Name</th>
+                    <th>Username</th>
+                    <th>Tickets Processed</th>
+                    <th>Total Cash Collected</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="staffBreakdownBody">
+                  <tr><td colspan="5" style="text-align:center; padding: 20px; color: var(--text-secondary);">Loading cashier metrics...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Daily Activity & Weekly Trend -->
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-head">
+              <div>
+                <h2>Weekly Parking Volume & Revenue Trend</h2>
+                <p>Monday through Sunday daily breakdown (300 Riel per moto).</p>
+              </div>
+            </div>
+            <div class="bar-chart" id="barChart"></div>
+          </div>
+
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-head">
+              <div>
+                <h2>Weekly Summary Total</h2>
+                <p>Total motorcycles and revenue for the last 7 days.</p>
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <span>Total Motorcycles</span>
+                <b id="weeklyMotorcycles">0</b>
+                <em>Completed parking</em>
+              </div>
+              <div class="stat">
+                <span>Standard Fee</span>
+                <b>300 Riel</b>
+                <em>Per motorcycle</em>
+              </div>
+              <div class="stat">
+                <span>Total Revenue (7 Days)</span>
+                <b id="weeklyTotalFee" class="peach-highlight">0 Riel</b>
+                <em>Last 7 days</em>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== STAFF REPORTS VIEW ==================== -->
+        <div id="staffReportsView" class="hidden">
+          <div class="reports-header-banner card" style="margin-bottom: 20px;">
+            <div class="reports-banner-content">
+              <div>
+                <span class="status-pill pending" style="font-weight: 700; font-size: 11px; margin-bottom: 6px; display: inline-block;">CASHIER SHIFT CONSOLE</span>
+                <h2 style="margin: 4px 0 6px 0;">My Daily Cashier Shift & Handover Report</h2>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 13.5px;">Review your collected cash, tickets processed, and print your shift handover slip.</p>
+              </div>
+              <div class="reports-header-actions">
+                <button class="primary" id="btnPrintShiftHandover"><span class="material-symbols-outlined icon-sm">receipt</span> Print Shift Handover Slip</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Staff KPI Cards -->
+          <div class="stats">
+            <div class="stat highlight-stat">
+              <span>My Shift Collected Cash</span>
+              <b style="color: #0C8A4D;" id="staffMyCashToday">0 Riel</b>
+              <em>Cash drawer collection today</em>
+            </div>
+            <div class="stat">
+              <span>Check-Outs Completed</span>
+              <b id="staffMyCheckoutsToday">0</b>
+              <em>Motorcycles checked out</em>
+            </div>
+            <div class="stat">
+              <span>Check-Ins Processed</span>
+              <b id="staffMyCheckinsToday">0</b>
+              <em>Motorcycles admitted</em>
+            </div>
+            <div class="stat">
+              <span>Standard Fee</span>
+              <b class="peach-highlight">300 Riel</b>
+              <em>Per motorcycle session</em>
+            </div>
+          </div>
+
+          <!-- Staff Quick Utilities: Cashier Change Calculator -->
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-head">
+              <div>
+                <h2>Cashier Change Calculator</h2>
+                <p>Quick change calculation for cash payments.</p>
+              </div>
+              <span class="badge-unpaid" style="background:#FFF3E0; color:#D84315;">FEE: 300 RIEL</span>
+            </div>
+            <div class="change-calc-box">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="calcCashTendered">Cash Received from Rider (Riel)</label>
+                <input type="number" id="calcCashTendered" placeholder="e.g. 1000" step="100" min="300" style="font-size: 16px; font-weight: 600;">
+              </div>
+              <div class="calc-presets" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+                <button type="button" class="btn-preset" data-amount="500">500 R</button>
+                <button type="button" class="btn-preset" data-amount="1000">1,000 R</button>
+                <button type="button" class="btn-preset" data-amount="2000">2,000 R</button>
+                <button type="button" class="btn-preset" data-amount="5000">5,000 R</button>
+                <button type="button" class="btn-preset" data-amount="10000">10,000 R</button>
+                <button type="button" class="btn-preset" data-amount="20000">20,000 R</button>
+              </div>
+              <div class="calc-result-card" id="calcResultCard" style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 10px; padding: 16px; text-align: center;">
+                <span style="font-size: 12px; color: #166534; font-weight: 600; text-transform: uppercase;">Change to Return to Rider</span>
+                <div style="font-size: 28px; font-weight: 800; color: #15803D; margin-top: 4px;" id="calcChangeOutput">0 Riel</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Staff Recent Shift Activity Feed -->
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-head">
+              <div>
+                <h2>Today's System Activity Feed</h2>
+                <p>Real-time log of entries and departures.</p>
+              </div>
+              <button class="link-btn" data-go="history">Full Parking History →</button>
+            </div>
+            <div id="staffShiftActivityList" class="activity-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-settings" class="page">
+        <div class="settings-grid">
+          <div class="card">
+            <h2>Parking Settings</h2><label>Total parking spaces</label><input id="capacityInput" type="number" min="1"
+              max="200" value="20"><label>Company name</label><input id="companyInput" value="Sereyromanea Building"><button
+              class="primary" id="saveSettings"><span class="material-symbols-outlined icon-sm">save</span> Save Settings</button>
+          </div>
+          <div class="card">
+            <h2>Camera & AI</h2>
+            <label>Entrance camera (ESP32-CAM) IP address</label>
+            <input id="cameraIpInput" placeholder="e.g. 172.20.10.12" value="172.20.10.12">
+            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+              <button class="secondary" id="saveCameraIp"><span class="material-symbols-outlined icon-sm">save</span> Save Camera IP</button>
+              <button class="secondary" id="btnAutoDetectCamera" title="Auto-discover ESP32-CAM on local network"><span class="material-symbols-outlined icon-sm">radar</span> Auto-Detect IP</button>
+            </div>
+            <div class="setting-row"><span>Entrance camera</span><b id="entranceCameraSettingStatus" class="green">Checking...</b></div>
+            <div class="setting-row"><span>Live stream URL</span><b class="green">/api/camera/stream</b></div>
+            <div class="setting-row"><span>Snapshot capture</span><b class="green">/api/camera/snapshot</b></div>
+            <div class="setting-row"><span>Exit checkpoint</span><b id="exitCameraSettingStatus" class="green">Live Camera Connected</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-users" class="page">
+        <div class="page-toolbar">
+          <div>
+            <h2>Employee Management</h2>
+            <p>Register and manage system operators and managers.</p>
+          </div>
+          <button class="primary" id="btnAddUser"><span class="material-symbols-outlined icon-sm">person_add</span> Add Employee</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Full Name</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th style="width: 160px; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="modal" class="modal hidden">
+    <div class="modal-card"><button class="close" id="closeModal"><span class="material-symbols-outlined icon-sm">close</span></button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- High-Resolution Image Lightbox Modal -->
+  <div id="imageLightbox" class="lightbox-overlay hidden" role="dialog" aria-modal="true" aria-label="Image Preview">
+    <div class="lightbox-container">
+      <div class="lightbox-header">
+        <div class="lightbox-title-group">
+          <span class="material-symbols-outlined icon-sm" style="color: var(--peach-primary);">photo_camera</span>
+          <span id="lightboxTitle" class="lightbox-title">Captured Image</span>
+        </div>
+        <div class="lightbox-controls">
+          <button type="button" class="lightbox-btn close" id="lightboxCloseBtn" title="Close Lightbox (Esc)">
+            <span class="material-symbols-outlined icon-sm">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="lightbox-body" id="lightboxBody">
+        <div class="lightbox-img-wrapper" id="lightboxImgWrapper">
+          <img id="lightboxImg" src="" alt="Enlarged captured view" class="lightbox-image">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="zxing.min.js"></script>
+  <script src="script.js?v=live11"></script>
+</body>
+
+</html>
