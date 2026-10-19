@@ -658,3 +658,5 @@ python backend\app.py
 ```
 
 Upon launch, the backend will verify database tables, ensure seed records exist, and automatically launch both the **Management Console** and **Customer Kiosk** browser windows.
+#   S e r e y r o m a n e a - P a r k i n g - M a n a g e m e n t - S y s t e m  
+ 
